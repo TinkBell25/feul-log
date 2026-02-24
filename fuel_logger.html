@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUEL LOG</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d0e0f;
+    --surface:  #161819;
+    --surface2: #1e2022;
+    --border:   #2a2d30;
+    --accent:   #e8a020;
+    --red:      #c0392b;
+    --green:    #4caf50;
+    --blue:     #3a8fd4;
+    --purple:   #9b59b6;
+    --teal:     #1abc9c;
+    --text:     #d4d8dc;
+    --muted:    #5a6068;
+    --mono:     'Share Tech Mono', monospace;
+    --sans:     'Barlow Condensed', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-weight: 300; min-height: 100vh; }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.35;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+  .container { max-width: 1300px; margin: 0 auto; padding: 0 24px 80px; position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  header {
+    border-bottom: 2px solid var(--accent);
+    padding: 28px 0 18px;
+    display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .logo h1 { font-family: var(--sans); font-weight: 900; font-size: clamp(2.8rem,7vw,5.5rem); letter-spacing: -0.02em; line-height: 0.85; color: #fff; text-transform: uppercase; }
+  .logo h1 span { color: var(--accent); }
+  .logo p { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-top: 8px; letter-spacing: 0.14em; }
+  .conn-status { font-family: var(--mono); font-size: 0.65rem; display: flex; align-items: center; gap: 6px; }
+  .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .conn-dot.online  { background: var(--green); box-shadow: 0 0 6px #4caf5080; }
+  .conn-dot.offline { background: var(--red); }
+
+  /* ── TABS ── */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); margin-top: 20px; overflow-x: auto; }
+  .tab-btn {
+    background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    color: var(--muted); font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 0.12em; padding: 12px 20px; cursor: pointer; white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px; background: var(--border); border: 1px solid var(--border); margin: 24px 0;
+  }
+  .stat { background: var(--surface); padding: 18px 20px; position: relative; }
+  .stat::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--accent); }
+  .stat.blue::before   { background: var(--blue); }
+  .stat.green::before  { background: var(--green); }
+  .stat.purple::before { background: var(--purple); }
+  .stat.teal::before   { background: var(--teal); }
+  .stat.red::before    { background: var(--red); }
+  .stat-label { font-family: var(--mono); font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 5px; }
+  .stat-value { font-family: var(--sans); font-weight: 700; font-size: 1.6rem; color: #fff; line-height: 1; }
+  .stat-value small { font-size: 0.8rem; font-weight: 300; color: var(--muted); margin-left: 3px; }
+
+  /* ── LAYOUT ── */
+  .main-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ── PANELS ── */
+  .panel { background: var(--surface); border: 1px solid var(--border); }
+  .panel-header {
+    background: var(--surface2); padding: 12px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel-header .dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; }
+  .panel-header h2 { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+  /* ── FORMS ── */
+  .form-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  label { font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  input, select, textarea {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 9px 12px; font-family: var(--mono); font-size: 0.88rem; outline: none;
+    transition: border-color 0.2s; width: 100%; -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  #carDesc { margin-top: 5px; font-family: var(--mono); font-size: 0.68rem; color: var(--accent); min-height: 14px; }
+
+  .cost-preview {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .cost-preview span:first-child { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .cost-val { font-family: var(--sans); font-weight: 700; font-size: 1.3rem; color: var(--accent); }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    background: var(--accent); color: #000; border: none; padding: 13px;
+    font-family: var(--sans); font-weight: 900; font-size: 0.95rem;
+    text-transform: uppercase; letter-spacing: 0.15em; cursor: pointer;
+    transition: background 0.2s, transform 0.1s; width: 100%;
+  }
+  .btn-primary:hover { background: #f0b030; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary.loading { background: var(--muted); cursor: not-allowed; }
+
+  .del-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 4px 9px; cursor: pointer; font-family: var(--mono); font-size: 0.62rem;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .del-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .form-msg { font-family: var(--mono); font-size: 0.68rem; text-align: center; min-height: 18px; }
+  .form-msg.success { color: var(--green); }
+  .form-msg.error   { color: var(--red); }
+
+  /* ── TABLE CONTROLS ── */
+  .tbl-ctrl {
+    padding: 12px 18px; background: var(--surface2); border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  .tbl-ctrl h2 { font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+  .tbl-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-sel {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 5px 10px; font-family: var(--mono); font-size: 0.62rem; text-transform: uppercase;
+    letter-spacing: 0.08em; outline: none; cursor: pointer;
+  }
+  .filter-sel:focus { border-color: var(--accent); }
+  .entry-count { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); background: var(--border); padding: 4px 10px; white-space: nowrap; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  thead tr { border-bottom: 2px solid var(--border); }
+  th { font-family: var(--mono); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 10px 14px; text-align: left; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; animation: fadeIn 0.2s ease; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 11px 14px; white-space: nowrap; vertical-align: middle; }
+  td.mono { font-family: var(--mono); }
+  td.accent { color: var(--accent); font-weight: 500; }
+  td.bold { font-family: var(--sans); font-weight: 700; font-size: 0.95rem; color: #fff; }
+  td.good { color: var(--green); font-family: var(--mono); }
+  td.warn { color: var(--accent); font-family: var(--mono); }
+  td.muted { color: var(--muted); font-family: var(--mono); font-size: 0.78rem; }
+
+  .reg-badge {
+    display: inline-block; background: #1a1500; border: 1px solid var(--accent);
+    color: var(--accent); font-family: var(--mono); font-size: 0.68rem;
+    padding: 2px 7px; letter-spacing: 0.08em;
+  }
+
+  .cat-badge {
+    display: inline-block; font-family: var(--mono); font-size: 0.62rem;
+    padding: 2px 8px; letter-spacing: 0.06em; border: 1px solid;
+  }
+  .cat-tyres          { color: #e67e22; border-color: #e67e22; background: #1a1000; }
+  .cat-car_wash       { color: var(--blue);   border-color: var(--blue);   background: #001428; }
+  .cat-car_service    { color: var(--green);  border-color: var(--green);  background: #001400; }
+  .cat-panel_beating  { color: var(--red);    border-color: var(--red);    background: #1a0000; }
+  .cat-special_service{ color: var(--purple); border-color: var(--purple); background: #0d0014; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 50px 20px; font-family: var(--mono); color: var(--muted); font-size: 0.78rem; }
+  .empty-state .big { font-size: 2.8rem; display: block; margin-bottom: 10px; opacity: 0.3; }
+
+  /* ── SERVICE SUMMARY CARDS ── */
+  .svc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: var(--border); margin-bottom: 20px; border: 1px solid var(--border); }
+  .svc-card { background: var(--surface); padding: 16px 18px; position: relative; }
+  .svc-card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; }
+  .svc-card.tyres::before           { background: #e67e22; }
+  .svc-card.car_wash::before        { background: var(--blue); }
+  .svc-card.car_service::before     { background: var(--green); }
+  .svc-card.panel_beating::before   { background: var(--red); }
+  .svc-card.special_service::before { background: var(--purple); }
+  .svc-card-label { font-family: var(--mono); font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .svc-card-value { font-family: var(--sans); font-weight: 700; font-size: 1.4rem; color: #fff; }
+  .svc-card-count { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); margin-top: 3px; }
+
+  /* ── CARS LIST ── */
+  .car-item { display: flex; align-items: center; justify-content: space-between; padding: 13px 18px; border-bottom: 1px solid var(--border); gap: 10px; animation: fadeIn 0.2s ease; }
+  .car-item:last-child { border-bottom: none; }
+  .car-reg  { font-family: var(--mono); font-size: 0.95rem; color: var(--accent); letter-spacing: 0.1em; white-space: nowrap; }
+  .car-desc { font-family: var(--sans); font-weight: 500; font-size: 0.9rem; color: var(--text); flex: 1; padding: 0 14px; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── SECTION DIVIDER ── */
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* Sticky left panel */
+  .sticky-panel { position: sticky; top: 20px; }
+
+  /* ── SMART CALC FIELDS ── */
+  .smart-fields { display: flex; flex-direction: column; gap: 10px; }
+  .smart-hint {
+    font-family: var(--mono); font-size: 0.62rem; color: var(--muted);
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 7px 12px; letter-spacing: 0.06em;
+  }
+  .smart-hint strong { color: var(--accent); font-weight: normal; }
+  .smart-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 6px;
+    align-items: end;
+  }
+  .smart-op {
+    font-family: var(--sans); font-weight: 700; font-size: 1.4rem;
+    color: var(--muted); padding-bottom: 8px; text-align: center;
+  }
+  .smart-field { min-width: 0; }
+  .smart-input-wrap { position: relative; display: flex; align-items: center; }
+  .smart-prefix, .smart-unit {
+    position: absolute; font-family: var(--mono); font-size: 0.75rem;
+    color: var(--muted); pointer-events: none; z-index: 1;
+  }
+  .smart-prefix { left: 10px; }
+  .smart-unit   { right: 8px; }
+  .smart-input-wrap input { padding-left: 22px; }
+  .smart-input-wrap:has(.smart-unit) input { padding-right: 22px; }
+
+  input.auto-calculated {
+    border-color: var(--accent) !important;
+    background: #1a1200 !important;
+    color: var(--accent) !important;
+  }
+
+  .smart-status {
+    font-family: var(--mono); font-size: 0.65rem; min-height: 16px;
+    color: var(--green); letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">
+      <h1>FUEL<span>_</span>LOG</h1>
+      <p>Vehicle management &amp; expense tracking // SQLite</p>
+    </div>
+    <div class="conn-status">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connLabel">checking...</span>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('fuel')">⛽ Fuel Log</button>
+    <button class="tab-btn"        onclick="switchTab('services')">🔧 Services</button>
+    <button class="tab-btn"        onclick="switchTab('cars')">🚗 Vehicles</button>
+  </div>
+
+  <!-- ══════════════════════════ TAB: FUEL LOG ══════════════════════════════ -->
+  <div class="tab-panel active" id="tab-fuel">
+
+    <!-- Fuel stats -->
+    <div class="stats-bar" id="fuelStats">
+      <div class="stat">         <div class="stat-label">Fill-ups</div>        <div class="stat-value" id="sEntries">—</div></div>
+      <div class="stat blue">   <div class="stat-label">Total Fuel</div>       <div class="stat-value" id="sFuel">—</div></div>
+      <div class="stat green">  <div class="stat-label">Total Distance</div>   <div class="stat-value" id="sDist">—</div></div>
+      <div class="stat purple"> <div class="stat-label">Avg L/100km</div>      <div class="stat-value" id="sConsump">—</div></div>
+      <div class="stat teal">   <div class="stat-label">Avg R/Litre</div>      <div class="stat-value" id="sRandL">—</div></div>
+      <div class="stat red">    <div class="stat-label">Total Spent</div>      <div class="stat-value" id="sSpent">—</div></div>
+    </div>
+
+    <div class="main-grid">
+
+      <!-- FORM -->
+      <div class="sticky-panel">
+        <div class="panel">
+          <div class="panel-header"><div class="dot"></div><h2>New Fuel Entry</h2></div>
+          <div class="form-body">
+            <div class="field">
+              <label>Vehicle</label>
+              <select id="fuelCar" required onchange="onFuelCarChange()">
+                <option value="">— select vehicle —</option>
+              </select>
+              <div id="carDesc"></div>
+            </div>
+            <div class="field">
+              <label>Date &amp; Time</label>
+              <input type="datetime-local" id="loggedAt" required>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Fuel Amount</label>
+                <input type="number" id="fuelAmount" placeholder="0.00" step="0.01" min="0" oninput="smartCalc('fuelAmount')">
+              </div>
+              <div class="field">
+                <label>Unit</label>
+                <select id="fuelUnit" onchange="onUnitChange()">
+                  <option value="litres">Litres</option>
+                  <option value="gallons">Gallons</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Price per <span id="unitLabel">Litre</span> (R)</label>
+              <input type="number" id="pricePerUnit" placeholder="0.00" step="0.001" min="0" oninput="smartCalc('pricePerUnit')">
+            </div>
+            <div class="field">
+              <label>Total Rand Spent (R)</label>
+              <input type="number" id="totalCostInput" placeholder="0.00" step="0.01" min="0" oninput="smartCalc('totalCostInput')">
+            </div>
+            <div class="cost-preview">
+              <span id="smartStatus">Fill in any 2 fields above</span>
+              <span class="cost-val" id="costPreview">—</span>
+            </div>
+            <div class="field">
+              <label>Odometer (km) — required for consumption</label>
+              <input type="number" id="odometer" placeholder="e.g. 85000" step="1" min="0">
+            </div>
+            <div class="field">
+              <label>Notes (optional)</label>
+              <input type="text" id="notes" placeholder="Station, fuel grade...">
+            </div>
+            <button class="btn-primary" id="submitFuelBtn" onclick="submitFuel()">LOG FUEL ENTRY</button>
+            <div class="form-msg" id="fuelMsg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FUEL TABLE -->
+      <div class="panel">
+        <div class="tbl-ctrl">
+          <h2>// Fuel History</h2>
+          <div class="tbl-right">
+            <select class="filter-sel" id="fuelFilterCar" onchange="loadFuelLogs()">
+              <option value="">All Vehicles</option>
+            </select>
+            <span class="entry-count" id="fuelCount">0 records</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Date / Time</th>
+                <th>Litres</th>
+                <th>R/Litre</th>
+                <th>Total Cost</th>
+                <th>Odometer</th>
+                <th>Distance</th>
+                <th>L/100km</th>
+                <th>R/km</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="fuelBody">
+              <tr><td colspan="11"><div class="empty-state"><span class="big">⛽</span>No fuel entries yet.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ TAB: SERVICES ══════════════════════════════ -->
+  <div class="tab-panel" id="tab-services">
+
+    <!-- Service summary cards -->
+    <div class="svc-cards" id="svcCards" style="margin-top:24px">
+      <div class="svc-card tyres">           <div class="svc-card-label">Tyres</div>           <div class="svc-card-value" id="svcTyres">R 0</div>          <div class="svc-card-count" id="svcTyresC">0 entries</div></div>
+      <div class="svc-card car_wash">        <div class="svc-card-label">Car Wash</div>        <div class="svc-card-value" id="svcWash">R 0</div>           <div class="svc-card-count" id="svcWashC">0 entries</div></div>
+      <div class="svc-card car_service">     <div class="svc-card-label">Car Service</div>     <div class="svc-card-value" id="svcService">R 0</div>        <div class="svc-card-count" id="svcServiceC">0 entries</div></div>
+      <div class="svc-card panel_beating">   <div class="svc-card-label">Panel Beating</div>   <div class="svc-card-value" id="svcPanel">R 0</div>         <div class="svc-card-count" id="svcPanelC">0 entries</div></div>
+      <div class="svc-card special_service"> <div class="svc-card-label">Special Service</div> <div class="svc-card-value" id="svcSpecial">R 0</div>       <div class="svc-card-count" id="svcSpecialC">0 entries</div></div>
+    </div>
+
+    <div class="main-grid">
+
+      <!-- SERVICE FORM -->
+      <div class="sticky-panel">
+        <div class="panel">
+          <div class="panel-header"><div class="dot"></div><h2>Log Service</h2></div>
+          <div class="form-body">
+            <div class="field">
+              <label>Vehicle</label>
+              <select id="svcCar" required>
+                <option value="">— select vehicle —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <select id="svcCategory">
+                <option value="tyres">Tyres</option>
+                <option value="car_wash">Car Wash</option>
+                <option value="car_service">Car Service</option>
+                <option value="panel_beating">Panel Beating</option>
+                <option value="special_service">Special Service</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Date</label>
+              <input type="datetime-local" id="svcDate" required>
+            </div>
+            <div class="field">
+              <label>Cost (R)</label>
+              <input type="number" id="svcCost" placeholder="0.00" step="0.01" min="0" required>
+            </div>
+            <div class="field">
+              <label>Service Provider / Workshop</label>
+              <input type="text" id="svcProvider" placeholder="e.g. AutoZone Pretoria">
+            </div>
+            <div class="field">
+              <label>Notes / Work Description</label>
+              <input type="text" id="svcNotes" placeholder="e.g. Replaced front brake pads">
+            </div>
+            <div class="field">
+              <label>Odometer at Service (km)</label>
+              <input type="number" id="svcOdometer" placeholder="e.g. 85000" step="1" min="0">
+            </div>
+            <hr class="section-divider">
+            <div class="field-row">
+              <div class="field">
+                <label>Next Due Date</label>
+                <input type="date" id="svcNextDate" placeholder="YYYY-MM-DD">
+              </div>
+              <div class="field">
+                <label>Next Due (km)</label>
+                <input type="number" id="svcNextKm" placeholder="e.g. 90000" step="1" min="0">
+              </div>
+            </div>
+            <button class="btn-primary" id="submitSvcBtn" onclick="submitService()">LOG SERVICE</button>
+            <div class="form-msg" id="svcMsg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SERVICE TABLE -->
+      <div class="panel">
+        <div class="tbl-ctrl">
+          <h2>// Service History</h2>
+          <div class="tbl-right">
+            <select class="filter-sel" id="svcFilterCar" onchange="loadServices()">
+              <option value="">All Vehicles</option>
+            </select>
+            <select class="filter-sel" id="svcFilterCat" onchange="loadServices()">
+              <option value="">All Categories</option>
+              <option value="tyres">Tyres</option>
+              <option value="car_wash">Car Wash</option>
+              <option value="car_service">Car Service</option>
+              <option value="panel_beating">Panel Beating</option>
+              <option value="special_service">Special Service</option>
+            </select>
+            <span class="entry-count" id="svcCount">0 records</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Vehicle</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th>Cost</th>
+                <th>Provider</th>
+                <th>Odometer</th>
+                <th>Next Due</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="svcBody">
+              <tr><td colspan="9"><div class="empty-state"><span class="big">🔧</span>No service entries yet.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════ TAB: VEHICLES ══════════════════════════════ -->
+  <div class="tab-panel" id="tab-cars">
+    <div class="main-grid" style="margin-top:24px">
+      <div class="panel">
+        <div class="panel-header"><div class="dot"></div><h2>Add Vehicle</h2></div>
+        <div class="form-body">
+          <div class="field">
+            <label>Registration Number</label>
+            <input type="text" id="newReg" placeholder="e.g. ABC 123 GP" oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div class="field">
+            <label>Description</label>
+            <input type="text" id="newDesc" placeholder="e.g. 2019 Toyota Hilux — White">
+          </div>
+          <button class="btn-primary" onclick="addCar()">ADD VEHICLE</button>
+          <div class="form-msg" id="carMsg"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="tbl-ctrl">
+          <h2>// Registered Vehicles</h2>
+          <span class="entry-count" id="carCount">0 vehicles</span>
+        </div>
+        <div id="carsList">
+          <div class="empty-state"><span class="big">🚗</span>No vehicles yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+const API = 'http://localhost:5000/api';
+let carsData = [];
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  const names = ['fuel','services','cars'];
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name==='services') { loadServices(); loadSvcSummary(); }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(function initDatetimes() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  const val = now.toISOString().slice(0,16);
+  document.getElementById('loggedAt').value = val;
+  document.getElementById('svcDate').value  = val;
+})();
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function fmt(v, dec=2) { return v != null ? parseFloat(v).toFixed(dec) : '—'; }
+function fmtR(v)       { return v != null ? 'R ' + parseFloat(v).toFixed(2) : '—'; }
+function setMsg(id, txt, type) {
+  const el = document.getElementById(id);
+  el.textContent = txt; el.className = 'form-msg ' + type;
+  if (type==='success') setTimeout(()=>{ el.textContent=''; el.className='form-msg'; }, 4000);
+}
+
+// ── SMART 3-FIELD CALCULATOR ─────────────────────────────────────────────────
+// Track the two most recently manually edited fields so we never overwrite them
+const _editHistory = [];
+
+function smartCalc(changedId) {
+  // Keep a rolling history of the last 2 manually edited fields
+  const idx = _editHistory.indexOf(changedId);
+  if (idx > -1) _editHistory.splice(idx, 1);
+  _editHistory.push(changedId);
+  if (_editHistory.length > 2) _editHistory.shift();
+
+  const litresEl  = document.getElementById('fuelAmount');
+  const priceEl   = document.getElementById('pricePerUnit');
+  const totalEl   = document.getElementById('totalCostInput');
+  const statusEl  = document.getElementById('smartStatus');
+  const previewEl = document.getElementById('costPreview');
+
+  const L = parseFloat(litresEl.value);
+  const P = parseFloat(priceEl.value);
+  const T = parseFloat(totalEl.value);
+
+  // The field to auto-calculate is whichever one is NOT in the edit history
+  const autoTarget = ['fuelAmount','pricePerUnit','totalCostInput']
+    .find(id => !_editHistory.includes(id));
+
+  [litresEl, priceEl, totalEl].forEach(el => el.classList.remove('auto-calculated'));
+
+  if (autoTarget === 'totalCostInput' && !isNaN(L) && !isNaN(P) && L > 0 && P > 0) {
+    const calc = +(L * P).toFixed(2);
+    totalEl.value = calc;
+    totalEl.classList.add('auto-calculated');
+    statusEl.textContent  = `${L}L × R${P} =`;
+    previewEl.textContent = `R ${calc}`;
+  } else if (autoTarget === 'pricePerUnit' && !isNaN(L) && !isNaN(T) && L > 0 && T > 0) {
+    const calc = +(T / L).toFixed(4);
+    priceEl.value = calc;
+    priceEl.classList.add('auto-calculated');
+    statusEl.textContent  = `R${T} ÷ ${L}L =`;
+    previewEl.textContent = `R ${calc}/L`;
+  } else if (autoTarget === 'fuelAmount' && !isNaN(P) && !isNaN(T) && P > 0 && T > 0) {
+    const calc = +(T / P).toFixed(2);
+    litresEl.value = calc;
+    litresEl.classList.add('auto-calculated');
+    statusEl.textContent  = `R${T} ÷ R${P} =`;
+    previewEl.textContent = `${calc} L`;
+  } else {
+    statusEl.textContent  = 'Fill in any 2 fields above';
+    previewEl.textContent = '—';
+  }
+}
+
+function onUnitChange() {
+  const u = document.getElementById('fuelUnit').value;
+  document.getElementById('unitLabel').textContent = u === 'litres' ? 'Litre' : 'Gallon';
+}
+
+function onFuelCarChange() {
+  const id = document.getElementById('fuelCar').value;
+  const car = carsData.find(c=>c.id==id);
+  document.getElementById('carDesc').textContent = car ? '▸ '+car.description : '';
+}
+
+function catLabel(cat) {
+  return { tyres:'Tyres', car_wash:'Car Wash', car_service:'Car Service',
+           panel_beating:'Panel Beating', special_service:'Special Service' }[cat] || cat;
+}
+
+function catBadge(cat) {
+  return `<span class="cat-badge cat-${cat}">${catLabel(cat)}</span>`;
+}
+
+// ── CONNECTION ────────────────────────────────────────────────────────────────
+async function checkConnection() {
+  const dot = document.getElementById('connDot'), lbl = document.getElementById('connLabel');
+  try { await fetch(`${API}/stats`); dot.className='conn-dot online'; lbl.textContent='server online'; }
+  catch { dot.className='conn-dot offline'; lbl.textContent='server offline'; }
+}
+
+// ── CARS ──────────────────────────────────────────────────────────────────────
+async function loadCars() {
+  try {
+    const res = await fetch(`${API}/cars`);
+    carsData = await res.json();
+
+    // Populate all dropdowns
+    ['fuelCar','svcCar','fuelFilterCar','svcFilterCar'].forEach(id => {
+      const sel = document.getElementById(id);
+      const prev = sel.value;
+      const isFilter = id.includes('Filter');
+      sel.innerHTML = isFilter
+        ? '<option value="">All Vehicles</option>'
+        : '<option value="">— select vehicle —</option>';
+      carsData.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = `${c.registration}  —  ${c.description}`;
+        sel.appendChild(o);
+      });
+      if (prev) sel.value = prev;
+    });
+    onFuelCarChange();
+
+    // Cars list
+    document.getElementById('carCount').textContent = `${carsData.length} vehicle${carsData.length!==1?'s':''}`;
+    const list = document.getElementById('carsList');
+    if (!carsData.length) {
+      list.innerHTML = `<div class="empty-state"><span class="big">🚗</span>No vehicles yet.</div>`;
+    } else {
+      list.innerHTML = carsData.map(c => `
+        <div class="car-item">
+          <span class="car-reg">${c.registration}</span>
+          <span class="car-desc">${c.description}</span>
+          <button class="del-btn" onclick="deleteCar(${c.id},'${c.registration}')">DEL</button>
+        </div>`).join('');
+    }
+  } catch {}
+}
+
+async function addCar() {
+  const reg = document.getElementById('newReg').value.trim().toUpperCase();
+  const desc = document.getElementById('newDesc').value.trim();
+  if (!reg||!desc) { setMsg('carMsg','✗ Both fields are required.','error'); return; }
+  try {
+    const res = await fetch(`${API}/cars`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({registration:reg,description:desc}) });
+    const data = await res.json();
+    if (!res.ok) { setMsg('carMsg','✗ '+data.error,'error'); return; }
+    setMsg('carMsg',`✓ ${reg} added.`,'success');
+    document.getElementById('newReg').value=''; document.getElementById('newDesc').value='';
+    loadCars();
+  } catch { setMsg('carMsg','✗ Server not reachable.','error'); }
+}
+
+async function deleteCar(id, reg) {
+  if (!confirm(`Delete ${reg}? Fuel and service logs for this vehicle will remain.`)) return;
+  await fetch(`${API}/cars/${id}`, {method:'DELETE'});
+  loadCars();
+}
+
+// ── FUEL STATS ────────────────────────────────────────────────────────────────
+async function loadFuelStats() {
+  const carId = document.getElementById('fuelFilterCar').value;
+  try {
+    const res = await fetch(`${API}/stats${carId?'?car_id='+carId:''}`);
+    const d = await res.json();
+    const unit = document.getElementById('fuelUnit').value;
+    document.getElementById('sEntries').innerHTML = d.total_entries + '<small>fills</small>';
+    document.getElementById('sFuel').innerHTML    = fmt(d.total_fuel,1) + `<small>${unit}</small>`;
+    document.getElementById('sDist').innerHTML    = d.total_distance_km != null ? fmt(d.total_distance_km,0)+'<small>km</small>' : '<small>need odo</small>';
+    document.getElementById('sConsump').innerHTML = d.avg_consumption_per100 != null ? fmt(d.avg_consumption_per100) : '<small style="font-size:0.75rem">need ≥2 odo</small>';
+    document.getElementById('sRandL').innerHTML   = d.overall_rand_per_litre  != null ? 'R '+fmt(d.overall_rand_per_litre,3) : '—';
+    document.getElementById('sSpent').innerHTML   = 'R '+fmt(d.total_spent,2);
+  } catch {}
+}
+
+// ── FUEL LOG ──────────────────────────────────────────────────────────────────
+async function loadFuelLogs() {
+  const carId = document.getElementById('fuelFilterCar').value;
+  loadFuelStats();
+  try {
+    const res = await fetch(`${API}/logs${carId?'?car_id='+carId:''}`);
+    const logs = await res.json();
+    document.getElementById('fuelCount').textContent = `${logs.length} record${logs.length!==1?'s':''}`;
+    const tbody = document.getElementById('fuelBody');
+    if (!logs.length) {
+      tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><span class="big">⛽</span>No fuel entries yet.</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = logs.map(l => {
+      const dt = new Date(l.logged_at);
+      const dstr = dt.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'});
+      const tstr = dt.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+      const hasConsump = l.consumption_per100 != null;
+      const cClass = hasConsump ? (l.consumption_per100 < 10 ? 'good' : 'warn') : 'muted';
+      return `<tr>
+        <td><span class="reg-badge">${l.registration}</span><div style="font-size:0.7rem;color:var(--muted);margin-top:3px">${l.car_description}</div></td>
+        <td class="mono">${dstr}<br><span style="color:var(--muted);font-size:0.72rem">${tstr}</span></td>
+        <td class="accent mono">${fmt(l.fuel_amount,2)} ${l.fuel_unit}</td>
+        <td class="mono">R ${fmt(l.price_per_unit,3)}</td>
+        <td class="bold">R ${fmt(l.total_cost,2)}</td>
+        <td class="mono">${l.odometer ? parseInt(l.odometer).toLocaleString()+' km' : '—'}</td>
+        <td class="mono">${l.distance_km != null ? l.distance_km.toLocaleString()+' km' : '<span style="color:var(--muted)">—</span>'}</td>
+        <td class="${cClass}">${hasConsump ? fmt(l.consumption_per100) : '<span style="color:var(--muted)">—</span>'}</td>
+        <td class="mono">${l.rand_per_km != null ? 'R '+fmt(l.rand_per_km,4) : '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="color:var(--muted);font-size:0.8rem;max-width:120px;overflow:hidden;text-overflow:ellipsis">${l.notes||'—'}</td>
+        <td><button class="del-btn" onclick="deleteFuelLog(${l.id})">DEL</button></td>
+      </tr>`;
+    }).join('');
+  } catch {}
+}
+
+async function submitFuel() {
+  const carId = document.getElementById('fuelCar').value;
+  if (!carId) { setMsg('fuelMsg','✗ Select a vehicle.','error'); return; }
+
+  const litres = parseFloat(document.getElementById('fuelAmount').value);
+  const price  = parseFloat(document.getElementById('pricePerUnit').value);
+  const total  = parseFloat(document.getElementById('totalCostInput').value);
+
+  if (isNaN(litres) || litres <= 0) { setMsg('fuelMsg','✗ Litres pumped is required.','error'); return; }
+  if (isNaN(price)  || price  <= 0) { setMsg('fuelMsg','✗ Price per litre is required.','error'); return; }
+  if (isNaN(total)  || total  <= 0) { setMsg('fuelMsg','✗ Total rand spent is required.','error'); return; }
+
+  const btn = document.getElementById('submitFuelBtn');
+  btn.classList.add('loading'); btn.textContent='SAVING...';
+
+  const payload = {
+    car_id:        carId,
+    logged_at:     document.getElementById('loggedAt').value,
+    fuel_amount:   litres,
+    fuel_unit:     document.getElementById('fuelUnit').value,
+    price_per_unit: price,
+    odometer:      document.getElementById('odometer').value || null,
+    notes:         document.getElementById('notes').value,
+  };
+
+  try {
+    const res = await fetch(`${API}/logs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    setMsg('fuelMsg',`✓ Logged — ${litres}L @ R${price}/L = R${data.total_cost}`,'success');
+
+    // Reset fields
+    ['fuelAmount','pricePerUnit','totalCostInput','odometer','notes'].forEach(id => {
+      const el = document.getElementById(id);
+      el.value = '';
+      el.classList.remove('auto-calculated');
+    });
+    _editHistory.length = 0;  // clear smart calc history
+    document.getElementById('smartStatus').textContent = '';
+    const n=new Date(); n.setMinutes(n.getMinutes()-n.getTimezoneOffset());
+    document.getElementById('loggedAt').value=n.toISOString().slice(0,16);
+    loadFuelLogs();
+  } catch { setMsg('fuelMsg','✗ Failed — is the server running?','error'); }
+  btn.classList.remove('loading'); btn.textContent='LOG FUEL ENTRY';
+}
+
+async function deleteFuelLog(id) {
+  if (!confirm('Delete this fuel entry?')) return;
+  await fetch(`${API}/logs/${id}`, {method:'DELETE'});
+  loadFuelLogs();
+}
+
+// ── SERVICES ──────────────────────────────────────────────────────────────────
+async function loadSvcSummary() {
+  const carId = document.getElementById('svcFilterCar').value;
+  try {
+    const res = await fetch(`${API}/stats${carId?'?car_id='+carId:''}`);
+    const d = await res.json();
+    const breakdown = {};
+    (d.service_breakdown||[]).forEach(r => breakdown[r.category]=r);
+    ['tyres','car_wash','car_service','panel_beating','special_service'].forEach(cat => {
+      const r = breakdown[cat]||{total:0,count:0};
+      const key = {tyres:'Tyres',car_wash:'Wash',car_service:'Service',panel_beating:'Panel',special_service:'Special'}[cat];
+      const valId = {tyres:'svcTyres',car_wash:'svcWash',car_service:'svcService',panel_beating:'svcPanel',special_service:'svcSpecial'}[cat];
+      const cntId = valId+'C';
+      document.getElementById(valId).textContent = 'R '+fmt(r.total,2);
+      document.getElementById(cntId).textContent = (r.count||0)+' entr'+(r.count===1?'y':'ies');
+    });
+  } catch {}
+}
+
+async function loadServices() {
+  const carId = document.getElementById('svcFilterCar').value;
+  const cat   = document.getElementById('svcFilterCat').value;
+  loadSvcSummary();
+  let qs = [];
+  if (carId) qs.push('car_id='+carId);
+  if (cat)   qs.push('category='+cat);
+  try {
+    const res = await fetch(`${API}/services${qs.length?'?'+qs.join('&'):''}`);
+    const rows = await res.json();
+    document.getElementById('svcCount').textContent = `${rows.length} record${rows.length!==1?'s':''}`;
+    const tbody = document.getElementById('svcBody');
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="big">🔧</span>No service entries.</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const dt = new Date(r.logged_at);
+      const dstr = dt.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'});
+      let nextDue = '—';
+      if (r.next_due_date||r.next_due_km) {
+        nextDue = '';
+        if (r.next_due_date) nextDue += r.next_due_date;
+        if (r.next_due_date && r.next_due_km) nextDue += ' / ';
+        if (r.next_due_km) nextDue += parseInt(r.next_due_km).toLocaleString()+' km';
+      }
+      return `<tr>
+        <td><span class="reg-badge">${r.registration}</span><div style="font-size:0.7rem;color:var(--muted);margin-top:3px">${r.car_description}</div></td>
+        <td>${catBadge(r.category)}</td>
+        <td class="mono">${dstr}</td>
+        <td class="bold">R ${fmt(r.cost,2)}</td>
+        <td style="color:var(--text);font-size:0.82rem;max-width:130px;overflow:hidden;text-overflow:ellipsis">${r.provider||'—'}</td>
+        <td class="mono">${r.odometer ? parseInt(r.odometer).toLocaleString()+' km' : '—'}</td>
+        <td class="mono" style="font-size:0.78rem;color:var(--muted)">${nextDue}</td>
+        <td style="color:var(--muted);font-size:0.8rem;max-width:150px;overflow:hidden;text-overflow:ellipsis">${r.notes||'—'}</td>
+        <td><button class="del-btn" onclick="deleteSvc(${r.id})">DEL</button></td>
+      </tr>`;
+    }).join('');
+  } catch {}
+}
+
+async function submitService() {
+  const carId = document.getElementById('svcCar').value;
+  if (!carId) { setMsg('svcMsg','✗ Select a vehicle.','error'); return; }
+  const cost = document.getElementById('svcCost').value;
+  if (!cost) { setMsg('svcMsg','✗ Enter a cost.','error'); return; }
+  const btn = document.getElementById('submitSvcBtn');
+  btn.classList.add('loading'); btn.textContent='SAVING...';
+  const payload = {
+    car_id:       carId,
+    category:     document.getElementById('svcCategory').value,
+    logged_at:    document.getElementById('svcDate').value,
+    cost:         cost,
+    provider:     document.getElementById('svcProvider').value,
+    notes:        document.getElementById('svcNotes').value,
+    odometer:     document.getElementById('svcOdometer').value || null,
+    next_due_date:document.getElementById('svcNextDate').value || null,
+    next_due_km:  document.getElementById('svcNextKm').value || null,
+  };
+  try {
+    const res = await fetch(`${API}/services`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (!res.ok) throw new Error();
+    setMsg('svcMsg','✓ Service entry logged.','success');
+    ['svcCost','svcProvider','svcNotes','svcOdometer','svcNextDate','svcNextKm'].forEach(id=>document.getElementById(id).value='');
+    loadServices();
+  } catch { setMsg('svcMsg','✗ Failed — is the server running?','error'); }
+  btn.classList.remove('loading'); btn.textContent='LOG SERVICE';
+}
+
+async function deleteSvc(id) {
+  if (!confirm('Delete this service entry?')) return;
+  await fetch(`${API}/services/${id}`, {method:'DELETE'});
+  loadServices(); loadSvcSummary();
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+checkConnection();
+loadCars().then(() => { loadFuelLogs(); });
+setInterval(checkConnection, 10000);
+</script>
+</body>
+</html>
